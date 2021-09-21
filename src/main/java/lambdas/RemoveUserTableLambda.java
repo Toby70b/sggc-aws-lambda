@@ -11,6 +11,7 @@ import models.MongoSettings;
 import org.apache.commons.io.FileUtils;
 import org.bson.Document;
 import utils.MongoConnectionManager;
+import utils.ResourceFileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,8 +27,9 @@ public class RemoveUserTableLambda implements RequestStreamHandler {
         LambdaLogger logger = context.getLogger();
         MongoSettings settings;
         logger.log("Searching for Mongo settings file\n");
+        ResourceFileUtils resourceFileUtils = new ResourceFileUtils();
         try {
-            settings = getMongoSettings();
+            settings = resourceFileUtils.deserializeJsonResourceFileIntoObject(MONGO_SETTINGS_FILE_PATH,MongoSettings.class);
         } catch (IOException exception) {
             logger.log("Error reading Mongo settings from file\n");
             throw exception;
@@ -48,17 +50,4 @@ public class RemoveUserTableLambda implements RequestStreamHandler {
         }
     }
 
-    public MongoSettings getMongoSettings() throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        File mongoSettingsFile = getResourceFile();
-        return mapper.readValue(mongoSettingsFile, MongoSettings.class);
-    }
-
-    private File getResourceFile() throws IOException {
-        InputStream inputStream = getClass().getResourceAsStream(MONGO_SETTINGS_FILE_PATH);
-        File tempFile = File.createTempFile("mongoSettingsTemp", ".json");
-        FileUtils.copyInputStreamToFile(inputStream, tempFile);
-        tempFile.deleteOnExit();
-        return tempFile;
-    }
 }
