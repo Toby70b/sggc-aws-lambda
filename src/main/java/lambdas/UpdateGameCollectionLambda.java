@@ -25,7 +25,7 @@ import java.util.NoSuchElementException;
 
 public class UpdateGameCollectionLambda implements RequestStreamHandler {
 
-    public static final String MONGO_SETTINGS_FILE_PATH = "/mongoSettings.json";
+    public static final String MONGO_SETTINGS_FILE_PATH = "/MongoSettings.json";
 
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
