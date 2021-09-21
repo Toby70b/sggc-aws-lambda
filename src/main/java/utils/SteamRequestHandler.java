@@ -16,7 +16,7 @@ public class SteamRequestHandler {
     private static final String URI = "https://api.steampowered.com/ISteamApps/GetAppList/v2/?key=";
     private static final String STEAM_API_KEY = "B88AF6D15A99EF5A4E01075EF63E5DF2";
 
-    public GetAppListResponse requestAllSteamAppsFromSteamApi() {
+    public static GetAppListResponse requestAllSteamAppsFromSteamApi() {
         String getAppListEndpoint = URI + STEAM_API_KEY;
         try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
             HttpGet request = new HttpGet(getAppListEndpoint);
