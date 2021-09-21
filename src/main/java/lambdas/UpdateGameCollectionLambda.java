@@ -11,7 +11,7 @@ import models.Game;
 import models.MongoSettings;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
-import utils.MongoConnectionManager;
+import utils.MongoConnector;
 import utils.ResourceFileUtils;
 import utils.SteamRequestHandler;
 
@@ -42,7 +42,7 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
         logger.log(settings.toString());
         logger.log("Attempting connection to MongoDB Cluster\n");
 
-        try (MongoClient mongoClient = MongoConnectionManager.connectToMongo(settings.getConnectionString())) {
+        try (MongoClient mongoClient = MongoConnector.connectToMongo(settings.getConnectionString())) {
             logger.log("Connection Established");
             MongoCollection<Game> gamesCollection =
                     getGameMongoCollection(mongoClient, settings.getDatabaseName(), settings.getGameCollectionName());
@@ -57,8 +57,6 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
                 gamesCollection.insertMany(filteredGames);
                 logger.log(String.format("%s new games successfully saved\n", filteredGames.size()));
             }
-
-
         } catch (NoSuchElementException e) {
             e.printStackTrace();
         }
