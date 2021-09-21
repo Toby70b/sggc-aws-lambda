@@ -9,7 +9,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import models.Game;
 import models.GetAppListResponse;
-import utils.MongoGameCollectionUpdater;
 import models.MongoSettings;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
