@@ -3,15 +3,12 @@ package lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
 import models.Game;
 import models.MongoSettings;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
 import utils.MongoConnector;
+import utils.MongoUtils;
 import utils.ResourceFileUtils;
 import utils.SteamRequestHandler;
 
@@ -33,7 +30,7 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
         logger.log("Searching for Mongo settings file\n");
         ResourceFileUtils resourceFileUtils = new ResourceFileUtils();
         try {
-            settings = resourceFileUtils.deserializeJsonResourceFileIntoObject(MONGO_SETTINGS_FILE_PATH,MongoSettings.class);
+            settings = resourceFileUtils.deserializeJsonResourceFileIntoObject(MONGO_SETTINGS_FILE_PATH, MongoSettings.class);
         } catch (IOException exception) {
             logger.log("Error reading Mongo settings from file\n");
             throw exception;
@@ -43,17 +40,16 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
         logger.log("Attempting connection to MongoDB Cluster\n");
 
         try (MongoClient mongoClient = MongoConnector.connectToMongo(settings.getConnectionString())) {
-            logger.log("Connection Established");
-            MongoCollection<Game> gamesCollection =
-                    getGameMongoCollection(mongoClient, settings.getDatabaseName(), settings.getGameCollectionName());
-            ArrayList<Game> storedGames = gamesCollection.find().into(new ArrayList<>());
+            logger.log("Connection to MongoDB Established\n");
+            MongoUtils mongoUtils = new MongoUtils(mongoClient, settings.getDatabaseName());
+            MongoCollection<Game> gamesCollection = mongoUtils.getCollection(settings.getGameCollectionName(),Game.class);
+            List<Game> storedGames = gamesCollection.find().into(new ArrayList<>());
             logger.log(String.format("%s stored games retrieved from db\n", storedGames.size()));
-            List<Game> allSteamGames = SteamRequestHandler.requestAllSteamAppsFromSteamApi().getApplist().getApps();
-            List<Game> filteredGames = filterExistingGamesOutOfList(allSteamGames,storedGames);
-            if(filteredGames.isEmpty()){
+            List<Game> allSteamGames = requestAllGamesFromSteam(logger);
+            List<Game> filteredGames = filterExistingGamesOutOfList(allSteamGames, storedGames);
+            if (filteredGames.isEmpty()) {
                 logger.log("No new games to insert, collection is up to date\n");
-            }
-            else {
+            } else {
                 gamesCollection.insertMany(filteredGames);
                 logger.log(String.format("%s new games successfully saved\n", filteredGames.size()));
             }
@@ -62,17 +58,23 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
         }
     }
 
-    private static MongoCollection<Game> getGameMongoCollection(MongoClient mongoClient, String databaseName, String collectionName) {
-        CodecRegistry pojoCodecRegistry = org.bson.codecs.configuration.CodecRegistries.fromRegistries(MongoClientSettings.getDefaultCodecRegistry(), org.bson.codecs.configuration.CodecRegistries.fromProviders(PojoCodecProvider.builder().automatic(true).build()));
-        MongoDatabase database = mongoClient.getDatabase(databaseName).withCodecRegistry(pojoCodecRegistry);
-        return database.getCollection(collectionName, Game.class);
+    private List<Game> requestAllGamesFromSteam(LambdaLogger logger) throws IOException {
+        List<Game> allSteamGames;
+        try {
+            allSteamGames = SteamRequestHandler.requestAllSteamAppsFromSteamApi().getApplist().getApps();
+        } catch (IOException e) {
+            logger.log("Exception occurred when requesting games from steam api");
+            e.printStackTrace();
+            throw e;
+        }
+        return allSteamGames;
     }
 
+
     public List<Game> filterExistingGamesOutOfList(List<Game> newGamesList, List<Game> existingGamesList) {
-        if(newGamesList == null || newGamesList.isEmpty()){
+        if (newGamesList == null || newGamesList.isEmpty()) {
             throw new NoSuchElementException("Error, Steam request returned no games");
-        }
-        else {
+        } else {
             newGamesList.removeAll(existingGamesList);
             return newGamesList;
         }
