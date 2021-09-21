@@ -9,6 +9,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import models.Game;
 import models.GetAppListResponse;
+import utils.MongoGameCollectionUpdater;
 import models.MongoSettings;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
@@ -46,7 +47,7 @@ public class UpdateGameCollectionLambda implements RequestStreamHandler {
         try (MongoClient mongoClient = MongoConnectionManager.connectToMongo(settings.getConnectionString())) {
             logger.log("Connection Established");
             MongoCollection<Game> gamesCollection =
-                    getGameMongoCollection(mongoClient, settings.getDatabaseName(), settings.getCollectionName());
+                    getGameMongoCollection(mongoClient, settings.getDatabaseName(), settings.getGameCollectionName());
             ArrayList<Game> storedGames = gamesCollection.find().into(new ArrayList<>());
             logger.log(String.format("%s stored games retrieved from db\n", storedGames.size()));
             GetAppListResponse allSteamApps = SteamRequestHandler.requestAllSteamAppsFromSteamApi();

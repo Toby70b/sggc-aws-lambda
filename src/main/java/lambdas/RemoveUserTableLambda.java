@@ -39,7 +39,7 @@ public class RemoveUserTableLambda implements RequestStreamHandler {
         try (MongoClient mongoClient = MongoConnectionManager.connectToMongo(settings.getConnectionString())) {
             logger.log("Connection Established");
             MongoDatabase database = mongoClient.getDatabase(settings.getDatabaseName());
-            MongoCollection<Document> user = database.getCollection(settings.getCollectionName());
+            MongoCollection<Document> user = database.getCollection(settings.getUserCollectionName());
             user.drop();
             logger.log("User table successfully dropped\n");
         } catch (Exception e) {
