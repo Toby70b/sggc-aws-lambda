@@ -31,11 +31,7 @@ public class SteamRequestHandler {
 
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(json, GetAppListResponse.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
-
     }
 }
 

@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 
 @Data
-@RequiredArgsConstructor
 public class Game {
     @JsonIgnore
     private ObjectId id;

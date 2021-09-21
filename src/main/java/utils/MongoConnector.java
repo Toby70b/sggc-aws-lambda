@@ -5,7 +5,7 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 
-public class MongoConnectionManager {
+public class MongoConnector {
 
     public static MongoClient connectToMongo(String connectionString) {
         ConnectionString mongoConnectionString = new ConnectionString(connectionString);

@@ -8,7 +8,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import models.MongoSettings;
 import org.bson.Document;
-import utils.MongoConnectionManager;
+import utils.MongoConnector;
 import utils.ResourceFileUtils;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class RemoveUserTableLambda implements RequestStreamHandler {
         logger.log("Successfully read from Mongo settings file:\n");
         logger.log(settings.toString());
         logger.log("Attempting connection to MongoDB Cluster\n");
-        try (MongoClient mongoClient = MongoConnectionManager.connectToMongo(settings.getConnectionString())) {
+        try (MongoClient mongoClient = MongoConnector.connectToMongo(settings.getConnectionString())) {
             logger.log("Connection Established");
             MongoDatabase database = mongoClient.getDatabase(settings.getDatabaseName());
             MongoCollection<Document> user = database.getCollection(settings.getUserCollectionName());
