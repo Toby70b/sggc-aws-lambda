@@ -19,7 +19,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Class representing a lambda function to be run by AWS Lambda
+ * Class representing a lambda function scheduled to run on AWS Lambda via  CRON timer every day at midnight 
+ * to update the SGGC's 'Game' DynamoDB Table with new Games added to Steam over the previous day.
  */
 public class UpdateGameCollectionLambda implements RequestStreamHandler {
 
