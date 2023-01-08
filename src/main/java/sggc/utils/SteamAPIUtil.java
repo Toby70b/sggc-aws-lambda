@@ -27,6 +27,7 @@ public class SteamAPIUtil {
      * @throws IOException if an exception occurs either sending the request or parsing the response into an object
      * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from AWS secrets manager
      */
+    //TODO replace with rest client used in SGGC_WS
     public static GetAppListResponse requestAllSteamAppsFromSteamApi() throws IOException,SecretRetrievalException {
         String getAppListEndpoint = URI + getSteamApiKey();
         try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
