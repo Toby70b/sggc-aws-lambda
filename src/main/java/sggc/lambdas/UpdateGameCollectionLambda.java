@@ -1,55 +1,61 @@
 package sggc.lambdas;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sggc.exceptions.SecretRetrievalException;
+import sggc.factory.DynamoDbEnhancedClientFactory;
+import sggc.infrasturcture.DynamoDbBatchWriter;
 import sggc.models.Game;
 import sggc.models.GetAppListResponse;
+import sggc.utils.SteamAPIUtil;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import sggc.utils.DynamoDbUtil;
-import sggc.utils.SteamAPIUtil;
+import software.amazon.awssdk.regions.Region;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.*;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * Class representing a lambda function scheduled to run on AWS Lambda via  CRON timer every day at midnight 
  * to update the SGGC's 'Game' DynamoDB Table with new Games added to Steam over the previous day.
  */
-public class UpdateGameCollectionLambda implements RequestStreamHandler {
+public class UpdateGameCollectionLambda {
 
     private static final String GAME_TABLE_NAME = "Game";
+    private static final Logger logger = LoggerFactory.getLogger(UpdateGameCollectionLambda.class);
 
-    @Override
-    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) {
-        LambdaLogger logger = context.getLogger();
-        logger.log("Creating DynamoDB client");
-        DynamoDbEnhancedClient enhancedClient = DynamoDbUtil.createDynamoDbEnhancedClient();
-        logger.log("DynamoDB client created");
+    public void handleRequest() {
+
+        String region = System.getenv("REGION");
+
+        logger.debug("Creating DynamoDB client");
+        DynamoDbEnhancedClient enhancedClient =
+                new DynamoDbEnhancedClientFactory().createDynamoDbEnhancedClient(Region.of(region));
+        logger.debug("DynamoDB client created");
         DynamoDbTable<Game> gameTable = enhancedClient.table(GAME_TABLE_NAME, TableSchema.fromBean(Game.class));
-        logger.log("Retrieving all persisted games via scan");
+        logger.info("Retrieving all persisted games via scan");
         Set<Game> persistedGames = gameTable.scan().items().stream().collect(Collectors.toSet());
-        logger.log("Persisted games retrieved");
+        logger.debug("Persisted games retrieved");
         Set<Game> allSteamGames = new HashSet<>();
-        logger.log("Contacting the Steam API for a Set of games");
+        logger.info("Contacting the Steam API for a Set of games");
         try {
             allSteamGames = requestAllGamesFromSteam();
         } catch (Exception e) {
-            logger.log("Exception occurred while contacting the Steam API [" + e + "]");
+            logger.error("Exception occurred while contacting the Steam API [" + e + "]");
             System.exit(1);
         }
-        logger.log("All games retrieved from Steam API games");
+        logger.debug("All games retrieved from Steam API games");
         Set<Game> newGames = getNonPersistedGames(persistedGames, allSteamGames);
         newGames.forEach(game -> game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli()));
-        logger.log("New games filtered, attempting to persists [" + newGames.size() + "] games");
-        DynamoDbUtil.batchWrite(Game.class, newGames, enhancedClient, gameTable);
-        logger.log("Save successful");
+        logger.info("New games filtered, attempting to persists [" + newGames.size() + "] games");
+        DynamoDbBatchWriter dynamoDbBatchWriter = new DynamoDbBatchWriter();
+        dynamoDbBatchWriter.batchWrite(Game.class, newGames, enhancedClient, gameTable);
+        logger.info("Save successful");
     }
 
     /**
