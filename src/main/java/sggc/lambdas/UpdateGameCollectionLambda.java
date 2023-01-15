@@ -39,7 +39,6 @@ public class UpdateGameCollectionLambda {
         logger.info("Retrieving all persisted games via scan");
         Set<Game> persistedGames = gameTable.scan().items().stream().collect(Collectors.toSet());
         logger.debug("Persisted games retrieved");
-        logger.info("Contacting the Steam API for a Set of games");
         Set<Game> allSteamGames = requestAllGamesFromSteam();
 
         if(allSteamGames == null){
@@ -72,14 +71,14 @@ public class UpdateGameCollectionLambda {
     /**
      * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform
      *
-     * @return a Set of all games currently stored by Steam's API
+     * @return a Set of all games currently stored by Steam's API. Returns null if games cannot be retrieved
      */
     public Set<Game> requestAllGamesFromSteam()  {
+        logger.info("Contacting the Steam API for a Set of games");
         AwsSecretRetriever secretRetriever = new AwsSecretRetriever(new AWSSecretsManagerClientFactory().createClient());
         SteamRequestSender steamRequestSender = new SteamRequestSender(secretRetriever);
-        GetAppListResponse getGamesResponse;
         try {
-            getGamesResponse = steamRequestSender.requestAllSteamAppsFromSteamApi();
+            GetAppListResponse getGamesResponse = steamRequestSender.requestAllSteamAppsFromSteamApi();
             return getGamesResponse.getApplist().getApps();
         } catch (IOException e) {
             logger.error("Error occurred during the request to Steam API.", e);

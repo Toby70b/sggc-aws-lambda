@@ -2,6 +2,7 @@ package sggc.infrasturcture;
 
 import com.google.gson.*;
 import lombok.extern.log4j.Log4j2;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -47,8 +48,11 @@ public class SteamRequestSender {
     /**
      * Retrieves a list of all games currently on Steam.
      *
-     * @return an object containing a list of all games, parsed from the response from the Steam API
-     * @throws IOException if an exception occurs either sending the request or parsing the response into an object
+     * @return an object containing a list of all games, parsed from the response from the Steam API.
+     * @throws IOException              if an exception occurs either sending the request or parsing the response into an object.
+     *                                  Can additionally be thrown if the response was not successful
+     * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
+     * @throws URISyntaxException       if an exception occurs constructing the request URI
      */
     public GetAppListResponse requestAllSteamAppsFromSteamApi() throws IOException, SecretRetrievalException, URISyntaxException {
         URI requestUri = steamApiRequest(GET_APP_LIST_ENDPOINT)
@@ -59,8 +63,14 @@ public class SteamRequestSender {
         try (CloseableHttpClient httpClient = HttpClients.createDefault();
              CloseableHttpResponse response = httpClient.execute(request)) {
             log.debug("Contacting [{}] to get list of all games on Steam.", sanitizeRequestUri(requestUri));
-            if (response.getEntity() != null && response.getEntity().getContent() != null) {
-                jsonResponse = response.getEntity().getContent().toString();
+            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                if (response.getEntity() != null && response.getEntity().getContent() != null) {
+                    jsonResponse = response.getEntity().getContent().toString();
+                } else {
+                    throw new IOException("Get App List response contained no response body.");
+                }
+            } else {
+                throw new IOException("Get App List request responded with a non-200 status code.");
             }
         }
         Gson gson = new Gson();
@@ -72,6 +82,9 @@ public class SteamRequestSender {
      *
      * @param appId the appid of the game whose details are being requested
      * @return a GameData object parsed from the response from the Steam API containing the details of the specified app
+     * @throws IOException        if an exception occurs either sending the request or parsing the response into an object.
+     *                            Can additionally be thrown if the response was not successful
+     * @throws URISyntaxException if an exception occurs constructing the request URI
      */
     public GameData requestAppDetails(String appId) throws IOException, URISyntaxException {
         URI requestUri = steamStoreRequest(GET_APP_DETAILS_ENDPOINT)
@@ -80,15 +93,20 @@ public class SteamRequestSender {
 
         HttpGet request = new HttpGet(requestUri);
 
-        String jsonResponse = null;
+        String jsonResponse;
         try (CloseableHttpClient httpClient = HttpClients.createDefault();
              CloseableHttpResponse response = httpClient.execute(request)) {
             log.debug("Contacting [{}] to get details of game [{}].", requestUri, appId);
-            if (response.getEntity() != null && response.getEntity().getContent() != null) {
-                jsonResponse = response.getEntity().getContent().toString();
+            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                if (response.getEntity() != null && response.getEntity().getContent() != null) {
+                    jsonResponse = response.getEntity().getContent().toString();
+                } else {
+                    throw new IOException("Get App details response contained no response body.");
+                }
+            } else {
+                throw new IOException("Get App details request responded with a non-200 status code.");
             }
         }
-
         return parseGameDetailsList(jsonResponse);
     }
 
@@ -143,6 +161,7 @@ public class SteamRequestSender {
      * Retrieves a Steam API key from AWS secrets manager
      *
      * @return a Steam API key stored within AWS secrets manager
+     * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
      */
 
     private String getSteamApiKey() throws SecretRetrievalException {
@@ -189,6 +208,8 @@ public class SteamRequestSender {
      *
      * @param endpoint the desired Steam API endpoint for the request to be built with
      * @return a builder object which can be chained to provide more properties that the request will be constructed with
+     * @throws URISyntaxException       if an exception occurs constructing the request URI
+     * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
      */
     private URIBuilder steamApiRequest(String endpoint) throws URISyntaxException, SecretRetrievalException {
         return new URIBuilder(steamApiAddress + endpoint)
@@ -200,6 +221,7 @@ public class SteamRequestSender {
      *
      * @param endpoint the desired Steam API endpoint for the request to be built with
      * @return a builder object which can be chained to provide more properties that the request will be constructed with
+     * @throws URISyntaxException if an exception occurs constructing the request URI
      */
     private URIBuilder steamStoreRequest(String endpoint) throws URISyntaxException {
         return new URIBuilder(steamStoreAddress + endpoint);
