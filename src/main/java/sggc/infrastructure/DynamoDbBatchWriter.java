@@ -1,4 +1,4 @@
-package sggc.infrasturcture;
+package sggc.infrastructure;
 
 import com.google.common.collect.Iterables;
 import lombok.RequiredArgsConstructor;

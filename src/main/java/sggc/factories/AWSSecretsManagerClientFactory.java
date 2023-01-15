@@ -1,4 +1,4 @@
-package sggc.factory;
+package sggc.factories;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;

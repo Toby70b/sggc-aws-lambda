@@ -1,13 +1,16 @@
-package sggc.infrasturcture;
+package sggc.infrastructure;
 
 import com.google.gson.*;
 import lombok.extern.log4j.Log4j2;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import sggc.exceptions.ApiException;
 import sggc.exceptions.SecretRetrievalException;
 import sggc.models.GameCategory;
 import sggc.models.GameData;
@@ -49,28 +52,30 @@ public class SteamRequestSender {
      * Retrieves a list of all games currently on Steam.
      *
      * @return an object containing a list of all games, parsed from the response from the Steam API.
-     * @throws IOException              if an exception occurs either sending the request or parsing the response into an object.
-     *                                  Can additionally be thrown if the response was not successful
-     * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
-     * @throws URISyntaxException       if an exception occurs constructing the request URI
+     * @throws IOException  if an exception occurs when parsing the response into from the Steam API.
+     * @throws ApiException if an unexpected event is encountered when requesting the games from the Steam API
      */
-    public GetAppListResponse requestAllSteamAppsFromSteamApi() throws IOException, SecretRetrievalException, URISyntaxException {
-        URI requestUri = steamApiRequest(GET_APP_LIST_ENDPOINT)
-                .build();
+    public GetAppListResponse requestAllSteamAppsFromSteamApi() throws IOException, ApiException {
+        URI requestUri;
+        try {
+            requestUri = steamApiRequest(GET_APP_LIST_ENDPOINT)
+                    .build();
+        } catch (URISyntaxException | SecretRetrievalException e) {
+            throw new ApiException("Exception encountered when constructing request URI.", e);
+        }
 
         HttpGet request = new HttpGet(requestUri);
-        String jsonResponse = null;
-        try (CloseableHttpClient httpClient = HttpClients.createDefault();
-             CloseableHttpResponse response = httpClient.execute(request)) {
-            log.debug("Contacting [{}] to get list of all games on Steam.", sanitizeRequestUri(requestUri));
+        String jsonResponse;
+        log.debug("Contacting [{}] to get list of all games on Steam.", sanitizeRequestUri(requestUri));
+        try (CloseableHttpResponse response = sendHttpRequest(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = response.getEntity().getContent().toString();
                 } else {
-                    throw new IOException("Get App List response contained no response body.");
+                    throw new ApiException("Get App List response contained no response body.");
                 }
             } else {
-                throw new IOException("Get App List request responded with a non-200 status code.");
+                throw new ApiException("Get App List request responded with a non-200 status code.");
             }
         }
         Gson gson = new Gson();
@@ -82,34 +87,39 @@ public class SteamRequestSender {
      *
      * @param appId the appid of the game whose details are being requested
      * @return a GameData object parsed from the response from the Steam API containing the details of the specified app
-     * @throws IOException        if an exception occurs either sending the request or parsing the response into an object.
-     *                            Can additionally be thrown if the response was not successful
-     * @throws URISyntaxException if an exception occurs constructing the request URI
+     * @throws ApiException if an unexpected event is encountered when requesting the details from the Steam API
+     * @throws IOException  if an exception occurs when parsing the response from the Steam API
      */
-    public GameData requestAppDetails(String appId) throws IOException, URISyntaxException {
-        URI requestUri = steamStoreRequest(GET_APP_DETAILS_ENDPOINT)
-                .addParameter(STEAM_APP_IDS_QUERY_PARAM_KEY, appId)
-                .build();
+    public GameData requestAppDetails(String appId) throws ApiException, IOException {
+
+        URI requestUri;
+        try {
+            requestUri = steamStoreRequest(GET_APP_DETAILS_ENDPOINT)
+                    .addParameter(STEAM_APP_IDS_QUERY_PARAM_KEY, appId)
+                    .build();
+        } catch (URISyntaxException e) {
+            throw new ApiException("Exception encountered when constructing request URI.", e);
+        }
 
         HttpGet request = new HttpGet(requestUri);
-
         String jsonResponse;
-        try (CloseableHttpClient httpClient = HttpClients.createDefault();
-             CloseableHttpResponse response = httpClient.execute(request)) {
-            log.debug("Contacting [{}] to get details of game [{}].", requestUri, appId);
+        log.debug("Contacting [{}] to get details of game [{}].", requestUri, appId);
+        try (CloseableHttpResponse response = sendHttpRequest(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = response.getEntity().getContent().toString();
                 } else {
-                    throw new IOException("Get App details response contained no response body.");
+                    throw new ApiException("Get App Details response contained no response body.");
                 }
             } else {
-                throw new IOException("Get App details request responded with a non-200 status code.");
+                throw new ApiException("Get App Details response contained non-200 status code.");
             }
+        } catch (IOException e) {
+            throw new ApiException("Exception encountered when executing HTTP request.");
         }
+
         return parseGameDetailsList(jsonResponse);
     }
-
 
     /**
      * Parses the game details list from Steam GetAppDetails endpoint into a model object
@@ -225,6 +235,20 @@ public class SteamRequestSender {
      */
     private URIBuilder steamStoreRequest(String endpoint) throws URISyntaxException {
         return new URIBuilder(steamStoreAddress + endpoint);
+    }
+
+    /**
+     * Sends a HTTP request.
+     *
+     * @param request the HTTP request to send.
+     * @return a HTTP response.
+     * @throws IOException if an exception occurs when executing the HTTP request.
+     */
+    private CloseableHttpResponse sendHttpRequest(HttpGet request) throws IOException {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault();
+             CloseableHttpResponse httpResponse = httpClient.execute(request)) {
+            return httpResponse;
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-package sggc.infrasturcture;
+package sggc.infrastructure;
 
 import sggc.exceptions.SecretRetrievalException;
 
