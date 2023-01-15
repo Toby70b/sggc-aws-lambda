@@ -8,6 +8,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import sggc.exceptions.SecretRetrievalException;
+import sggc.factory.AWSSecretsManagerClientFactory;
+import sggc.infrasturcture.AwsSecretRetriever;
+import sggc.infrasturcture.SecretRetriever;
 import sggc.models.GetAppListResponse;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
@@ -48,8 +51,9 @@ public class SteamAPIUtil {
      * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from AWS secrets manager
      */
     private static String getSteamApiKey() throws SecretRetrievalException {
-        try(SecretsManagerClient secretsManagerClient = SecretManagerUtil.createSecretManagerClient()){
-            return SecretManagerUtil.getSecretValue(secretsManagerClient,STEAM_API_KEY_NAME);
+        try(SecretsManagerClient secretsManagerClient = new AWSSecretsManagerClientFactory().createClient()){
+            SecretRetriever secretRetriever = new AwsSecretRetriever(secretsManagerClient);
+            return secretRetriever.getSecretValue(STEAM_API_KEY_NAME);
         }
         catch (Exception e){
             throw new SecretRetrievalException("Exception occurred when attempting to retrieve Steam API Key from AWS secrets manager",e);

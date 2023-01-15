@@ -11,7 +11,6 @@ import sggc.utils.SteamAPIUtil;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.regions.Region;
 
 import java.io.IOException;
 import java.util.Date;
@@ -30,12 +29,8 @@ public class UpdateGameCollectionLambda {
     private static final Logger logger = LoggerFactory.getLogger(UpdateGameCollectionLambda.class);
 
     public void handleRequest() {
-
-        String region = System.getenv("REGION");
-
         logger.debug("Creating DynamoDB client");
-        DynamoDbEnhancedClient enhancedClient =
-                new DynamoDbEnhancedClientFactory().createDynamoDbEnhancedClient(Region.of(region));
+        DynamoDbEnhancedClient enhancedClient = new DynamoDbEnhancedClientFactory().createEnhancedClient();
         logger.debug("DynamoDB client created");
         DynamoDbTable<Game> gameTable = enhancedClient.table(GAME_TABLE_NAME, TableSchema.fromBean(Game.class));
         logger.info("Retrieving all persisted games via scan");
@@ -53,8 +48,8 @@ public class UpdateGameCollectionLambda {
         Set<Game> newGames = getNonPersistedGames(persistedGames, allSteamGames);
         newGames.forEach(game -> game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli()));
         logger.info("New games filtered, attempting to persist [{}] games", newGames.size());
-        DynamoDbBatchWriter dynamoDbBatchWriter = new DynamoDbBatchWriter();
-        dynamoDbBatchWriter.batchWrite(Game.class, newGames, enhancedClient, gameTable);
+        DynamoDbBatchWriter dynamoDbBatchWriter = new DynamoDbBatchWriter(enhancedClient);
+        dynamoDbBatchWriter.batchWrite(Game.class, newGames, gameTable);
         logger.info("Save successful");
     }
 

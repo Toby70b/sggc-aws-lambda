@@ -11,13 +11,13 @@ public class DynamoDbEnhancedClientFactory {
 
     /**
      * Initializes a new {@link DynamoDbEnhancedClient} object; A client for interacting with an Amazon DynamoDB instance.
+     * The region of the client is determined by the 'REGION' environment variable
      *
-     * @param region the region that the Amazon DynamoDB instance resides in.
      * @return a new client for interacting with a local Amazon DynamoDB instance.
      */
-    public DynamoDbEnhancedClient createDynamoDbEnhancedClient(Region region) {
+    public DynamoDbEnhancedClient createEnhancedClient() {
         DynamoDbClient dynamoDbClient = DynamoDbClient.builder()
-                .region(region)
+                .region(Region.of(System.getenv("REGION")))
                 .build();
         return DynamoDbEnhancedClient.builder()
                 .dynamoDbClient(dynamoDbClient)
