@@ -1,18 +1,22 @@
 package sggc.lambdas;
 
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sggc.exceptions.SecretRetrievalException;
+import sggc.factory.AWSSecretsManagerClientFactory;
 import sggc.factory.DynamoDbEnhancedClientFactory;
+import sggc.infrasturcture.AwsSecretRetriever;
 import sggc.infrasturcture.DynamoDbBatchWriter;
+import sggc.infrasturcture.SteamRequestSender;
 import sggc.models.Game;
 import sggc.models.GetAppListResponse;
-import sggc.utils.SteamAPIUtil;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,12 +42,14 @@ public class UpdateGameCollectionLambda {
         logger.debug("Persisted games retrieved");
         Set<Game> allSteamGames = new HashSet<>();
         logger.info("Contacting the Steam API for a Set of games");
-        try {
-            allSteamGames = requestAllGamesFromSteam();
-        } catch (Exception e) {
-            logger.error("Exception occurred while contacting the Steam API [{}]", e, e);
+
+        allSteamGames = requestAllGamesFromSteam();
+
+        if(allSteamGames == null){
+            logger.error("Could not retrieve list of all Steam games, exiting");
             System.exit(1);
         }
+
         logger.debug("All games retrieved from Steam API games");
         Set<Game> newGames = getNonPersistedGames(persistedGames, allSteamGames);
         newGames.forEach(game -> game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli()));
@@ -70,16 +76,27 @@ public class UpdateGameCollectionLambda {
      * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform
      *
      * @return a Set of all games currently stored by Steam's API
-     * @throws SecretRetrievalException if an error occurs trying to retrieve the Steam API Key from AWS secrets manager
-     * @throws IOException              if an error occurs sending or receiving the request from the Steam API
-     * @throws IllegalArgumentException if the parsed response from the Steam API isn't as expected
      */
-    public Set<Game> requestAllGamesFromSteam() throws SecretRetrievalException, IOException, IllegalArgumentException {
-        GetAppListResponse getGamesResponse = SteamAPIUtil.requestAllSteamAppsFromSteamApi();
+    public Set<Game> requestAllGamesFromSteam()  {
+        AwsSecretRetriever secretRetriever = new AwsSecretRetriever(new AWSSecretsManagerClientFactory().createClient());
+        SteamRequestSender steamRequestSender = new SteamRequestSender(secretRetriever);
+        GetAppListResponse getGamesResponse = null;
+        try {
+            getGamesResponse = steamRequestSender.requestAllSteamAppsFromSteamApi();
+        } catch (IOException e) {
+            logger.error("Error occurred during the request to Steam API.", e);
+            return null;
+        } catch (SecretRetrievalException e) {
+            logger.error("Error occurred retrieving secret from the external secret store.", e);
+            return null;
+        } catch (URISyntaxException e) {
+            logger.error("Error occurred constructing request URI for the request to Steam API.", e);
+            return null;
+        }
         if (getGamesResponse != null) {
             return getGamesResponse.getApplist().getApps();
         } else {
-            throw new IllegalArgumentException("Parsed response from Steam API was null");
+            throw new IllegalArgumentException("Parsed response from Steam API was null.");
         }
     }
 }

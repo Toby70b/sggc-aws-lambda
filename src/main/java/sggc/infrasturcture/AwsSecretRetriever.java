@@ -2,6 +2,7 @@ package sggc.infrasturcture;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import sggc.exceptions.SecretRetrievalException;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
@@ -22,7 +23,7 @@ public class AwsSecretRetriever implements SecretRetriever {
      * @return the specified key stored within AWS secrets manager, or null if none could be found.
      */
     @Override
-    public String getSecretValue(String secretKey) {
+    public String getSecretValue(String secretKey) throws SecretRetrievalException {
         try {
             log.debug("Attempting to retrieve secret [{}] from AWS Secrets Manager", secretKey);
             GetSecretValueRequest valueRequest = GetSecretValueRequest.builder()
@@ -32,7 +33,7 @@ public class AwsSecretRetriever implements SecretRetriever {
             return valueResponse.secretString();
         } catch (Exception e) {
             log.error("Error occurred when retrieving secret [{}] from AWS Secrets Manager", secretKey);
-            return null;
+            throw new SecretRetrievalException(secretKey, e);
         }
     }
 }

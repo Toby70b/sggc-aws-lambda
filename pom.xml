@@ -71,12 +71,6 @@
             <version>1.5.1</version>
         </dependency>
 
-        <!-- ********** Jackson ********** -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.14.1</version>
-        </dependency>
         <!-- ********** Lombok ********** -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -84,11 +78,17 @@
             <version>1.18.20</version>
             <scope>provided</scope>
         </dependency>
-        <!-- ********** Apache HTTP Components ********** -->
+        <!-- ********** HTTP Client ********** -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.14</version>
+        </dependency>
+        <!-- ********** GSON ********** -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10</version>
         </dependency>
         <!-- ********** Guava ********** -->
         <dependency>
