@@ -1,6 +1,5 @@
 package sggc.lambdas;
 
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sggc.exceptions.SecretRetrievalException;
