@@ -39,10 +39,8 @@ public class UpdateGameCollectionLambda {
         logger.info("Retrieving all persisted games via scan");
         Set<Game> persistedGames = gameTable.scan().items().stream().collect(Collectors.toSet());
         logger.debug("Persisted games retrieved");
-        Set<Game> allSteamGames = new HashSet<>();
         logger.info("Contacting the Steam API for a Set of games");
-
-        allSteamGames = requestAllGamesFromSteam();
+        Set<Game> allSteamGames = requestAllGamesFromSteam();
 
         if(allSteamGames == null){
             logger.error("Could not retrieve list of all Steam games, exiting");
@@ -79,9 +77,10 @@ public class UpdateGameCollectionLambda {
     public Set<Game> requestAllGamesFromSteam()  {
         AwsSecretRetriever secretRetriever = new AwsSecretRetriever(new AWSSecretsManagerClientFactory().createClient());
         SteamRequestSender steamRequestSender = new SteamRequestSender(secretRetriever);
-        GetAppListResponse getGamesResponse = null;
+        GetAppListResponse getGamesResponse;
         try {
             getGamesResponse = steamRequestSender.requestAllSteamAppsFromSteamApi();
+            return getGamesResponse.getApplist().getApps();
         } catch (IOException e) {
             logger.error("Error occurred during the request to Steam API.", e);
             return null;
@@ -91,11 +90,6 @@ public class UpdateGameCollectionLambda {
         } catch (URISyntaxException e) {
             logger.error("Error occurred constructing request URI for the request to Steam API.", e);
             return null;
-        }
-        if (getGamesResponse != null) {
-            return getGamesResponse.getApplist().getApps();
-        } else {
-            throw new IllegalArgumentException("Parsed response from Steam API was null.");
         }
     }
 }
