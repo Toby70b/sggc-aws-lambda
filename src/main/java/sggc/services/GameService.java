@@ -3,9 +3,6 @@ package sggc.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import sggc.exceptions.ApiException;
-import sggc.exceptions.SecretRetrievalException;
-import sggc.factories.AWSSecretsManagerClientFactory;
-import sggc.infrastructure.AwsSecretRetriever;
 import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
 import sggc.models.GameCategory;
@@ -13,7 +10,6 @@ import sggc.models.GameData;
 import sggc.models.GetAppListResponse;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Set;
 
 /**
@@ -34,9 +30,9 @@ public class GameService {
      */
     public Boolean isGameMultiplayer(Game game)  {
         log.debug("Attempting to determine whether game [{}] is multiplayer", game.getAppid());
-        GameData parsedResponse = null;
+        GameData parsedResponse;
         try {
-            parsedResponse = steamRequestSender.requestAppDetails(game.getAppid());
+            parsedResponse = steamRequestSender.getAppDetails(game.getAppid());
         } catch (ApiException | IOException e) {
             log.error("Error encountered when trying to determine game's multiplayer status.");
             return null;
@@ -60,7 +56,7 @@ public class GameService {
     public Set<Game> requestAllGamesFromSteam() {
         log.info("Contacting the Steam API for a Set of games");
         try {
-            GetAppListResponse getGamesResponse = steamRequestSender.requestAllSteamAppsFromSteamApi();
+            GetAppListResponse getGamesResponse = steamRequestSender.getListOfAllSteamGames();
             return getGamesResponse.getApplist().getApps();
         } catch (IOException | ApiException ex) {
             log.error("Error occurred during the request to Steam API.", ex);
