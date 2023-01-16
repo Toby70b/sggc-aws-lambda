@@ -1,7 +1,7 @@
 package sggc.infrastructure;
 
 import com.google.gson.*;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -23,7 +23,7 @@ import java.util.Collections;
 /**
  * Represents an interface for communicating with the Steam API
  */
-@Log4j2
+@Slf4j
 public class SteamRequestSender {
     public static final String STEAM_API_KEY_MASK = "*************";
 

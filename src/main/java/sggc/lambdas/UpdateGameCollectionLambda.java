@@ -1,24 +1,17 @@
 package sggc.lambdas;
 
-import lombok.extern.log4j.Log4j2;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import sggc.exceptions.ApiException;
-import sggc.exceptions.SecretRetrievalException;
+import lombok.extern.slf4j.Slf4j;
 import sggc.factories.AWSSecretsManagerClientFactory;
 import sggc.factories.DynamoDbEnhancedClientFactory;
 import sggc.infrastructure.AwsSecretRetriever;
 import sggc.infrastructure.DynamoDbBatchWriter;
 import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
-import sggc.models.GetAppListResponse;
 import sggc.services.GameService;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -29,7 +22,7 @@ import java.util.stream.Collectors;
  * Class representing a lambda function scheduled to run on AWS Lambda via  CRON timer every day at midnight
  * to update the SGGC's 'Game' DynamoDB Table with new Games added to Steam over the previous day.
  */
-@Log4j2
+@Slf4j
 public class UpdateGameCollectionLambda {
 
     private static final String GAME_TABLE_NAME = "Game";

@@ -1,7 +1,7 @@
 package sggc.infrastructure;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import sggc.exceptions.SecretRetrievalException;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRespon
 /**
  * Represents an interface for retrieving secrets required by the application from AWS Secret Manager
  */
-@Log4j2
+@Slf4j
 @RequiredArgsConstructor
 public class AwsSecretRetriever implements SecretRetriever {
 

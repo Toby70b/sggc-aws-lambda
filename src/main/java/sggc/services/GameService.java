@@ -1,7 +1,7 @@
 package sggc.services;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import sggc.exceptions.ApiException;
 import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
@@ -15,7 +15,7 @@ import java.util.Set;
 /**
  * Represents a service for containing business logic related to Game objects.
  */
-@Log4j2
+@Slf4j
 @RequiredArgsConstructor
 public class GameService {
 
