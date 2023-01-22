@@ -7,6 +7,7 @@ import sggc.infrastructure.AwsSecretRetriever;
 import sggc.infrastructure.DynamoDbBatchWriter;
 import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
+import sggc.models.service.Result;
 import sggc.services.GameService;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -39,9 +40,12 @@ public class UpdateGameCollectionLambda {
         AwsSecretRetriever secretRetriever = new AwsSecretRetriever(new AWSSecretsManagerClientFactory().createClient());
         SteamRequestSender steamRequestSender = new SteamRequestSender(secretRetriever);
         GameService gameService = new GameService(steamRequestSender);
-        Set<Game> allSteamGames = gameService.requestAllGamesFromSteam();
+        Result<Set<Game>> allSteamGamesResult = gameService.requestAllGamesFromSteam();
+        Set<Game> allSteamGames = null;
 
-        if(allSteamGames == null){
+        if (allSteamGamesResult.isSuccess() && allSteamGamesResult.getData() != null) {
+            allSteamGames = allSteamGamesResult.getData();
+        } else {
             log.error("Could not retrieve list of all Steam games, exiting");
             System.exit(1);
         }
@@ -50,7 +54,10 @@ public class UpdateGameCollectionLambda {
         Set<Game> newGames = getNonPersistedGames(persistedGames, allSteamGames);
         for (Game game : newGames) {
             game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli());
-            game.setMultiplayer(gameService.isGameMultiplayer(game));
+            Result<Boolean> multiplayerStatusResult = gameService.isGameMultiplayer(game);
+            if (multiplayerStatusResult.isSuccess() && multiplayerStatusResult.getData() != null) {
+                game.setMultiplayer(multiplayerStatusResult.getData());
+            }
         }
         log.info("New games filtered, attempting to persist [{}] games", newGames.size());
         DynamoDbBatchWriter dynamoDbBatchWriter = new DynamoDbBatchWriter(enhancedClient);

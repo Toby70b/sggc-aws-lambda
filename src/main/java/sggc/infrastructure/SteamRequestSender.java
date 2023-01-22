@@ -11,9 +11,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import sggc.exceptions.ApiException;
 import sggc.exceptions.SecretRetrievalException;
-import sggc.models.GameCategory;
-import sggc.models.GameData;
-import sggc.models.GetAppListResponse;
+import sggc.models.steam.GameCategory;
+import sggc.models.steam.GameData;
+import sggc.models.steam.GetAppListResponse;
 
 import java.io.IOException;
 import java.net.URI;

@@ -5,11 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import sggc.exceptions.ApiException;
 import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
-import sggc.models.GameCategory;
-import sggc.models.GameData;
-import sggc.models.GetAppListResponse;
+import sggc.models.service.ErrorResult;
+import sggc.models.service.Result;
+import sggc.models.service.SuccessResult;
+import sggc.models.service.error.Error;
+import sggc.models.service.error.ErrorType;
+import sggc.models.steam.GameCategory;
+import sggc.models.steam.GameData;
+import sggc.models.steam.GetAppListResponse;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -25,42 +31,47 @@ public class GameService {
      * Determines whether the provided game is considered by Steam to be multiplayer.
      *
      * @param game the game to check
-     * @return true if the game is multiplayer otherwise false. Returns null if the game's multiplayer status could
-     * not be determined.
+     * @return A {@link SuccessResult} object containing the game's multiplayer status. If instead an error was
+     * encountered an {@link ErrorResult} object containing details on the error.
      */
-    public Boolean isGameMultiplayer(Game game)  {
+    public Result<Boolean> isGameMultiplayer(Game game) {
         log.debug("Attempting to determine whether game [{}] is multiplayer", game.getAppid());
         GameData parsedResponse;
         try {
             parsedResponse = steamRequestSender.getAppDetails(game.getAppid());
         } catch (ApiException | IOException e) {
-            log.error("Error encountered when trying to determine game's multiplayer status.");
-            return null;
+            String errorMessage = "Error encountered when trying to determine game's multiplayer status.";
+            log.error(errorMessage);
+            return new ErrorResult<>(List.of(new Error(ErrorType.EXCEPTION_ENCOUNTERED,
+                    errorMessage)));
         }
         //Check for presence of multiplayer category
         for (GameCategory category : parsedResponse.getCategories()) {
             if (category.getId() == GameCategory.SteamGameCategory.MULTIPLAYER) {
                 log.debug("Game [{}] is multiplayer", game.getAppid());
-                return true;
+                return new SuccessResult<>(true);
             }
         }
         log.debug("Game [{}] is not multiplayer", game.getAppid());
-        return false;
+        return new SuccessResult<>(false);
     }
 
     /**
      * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform
      *
-     * @return a Set of all games currently stored by Steam's API. Returns null if games could not be retrieved
+     * @return A {@link SuccessResult} object containing all games currently stored on Steam. If instead an error was
+     * encountered an {@link ErrorResult} object containing details on the error.
      */
-    public Set<Game> requestAllGamesFromSteam() {
+    public Result<Set<Game>> requestAllGamesFromSteam() {
         log.info("Contacting the Steam API for a Set of games");
         try {
             GetAppListResponse getGamesResponse = steamRequestSender.getListOfAllSteamGames();
-            return getGamesResponse.getApplist().getApps();
+            return new SuccessResult<>(getGamesResponse.getApplist().getApps());
         } catch (IOException | ApiException ex) {
-            log.error("Error occurred during the request to Steam API.", ex);
-            return null;
+            String logMessage = "Error occurred during the request to Steam API.";
+            log.error(logMessage, ex);
+            return new ErrorResult<>(List.of(new Error(ErrorType.EXCEPTION_ENCOUNTERED,
+                    logMessage)));
         }
     }
 }

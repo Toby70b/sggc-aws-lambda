@@ -1,4 +1,4 @@
-package sggc.models;
+package sggc.models.steam;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

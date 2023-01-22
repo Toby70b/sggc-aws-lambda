@@ -1,4 +1,4 @@
-package sggc.models;
+package sggc.models.steam;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;
