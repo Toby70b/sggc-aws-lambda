@@ -1,10 +1,10 @@
-package sggc.models;
+package sggc.models.steam;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Represents a response from the Steam API's GetAppList endpoint
+ * Represents a response from the Steam API's GetAppList endpoint.
  */
 @Data
 @RequiredArgsConstructor
