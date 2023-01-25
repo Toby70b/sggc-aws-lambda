@@ -64,7 +64,6 @@ public class SteamRequestSender {
             requestUri = steamApiRequest(GET_APP_LIST_ENDPOINT)
                     .build();
         } catch (URISyntaxException | SecretRetrievalException e) {
-            log.error("Exception encountered when constructing request URI, throwing exception.");
             throw new ApiException("Exception encountered when constructing request URI.", e);
         }
 
@@ -77,15 +76,12 @@ public class SteamRequestSender {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = EntityUtils.toString(response.getEntity());
                 } else {
-                    log.error("Get App List response contained no response body, throwing exception.");
                     throw new ApiException("Get App List response contained no response body.");
                 }
             } else {
-                log.error("Get App List request responded with a non-200 status code., throwing exception.");
                 throw new ApiException("Get App List request responded with a non-200 status code.");
             }
         } catch (IOException e) {
-            log.error("Exception encountered when executing HTTP request, throwing exception.");
             throw new ApiException("Exception encountered when executing HTTP request.");
         }
 
@@ -109,7 +105,6 @@ public class SteamRequestSender {
                     .addParameter(STEAM_APP_IDS_QUERY_PARAM_KEY, appId)
                     .build();
         } catch (URISyntaxException e) {
-            log.error("Exception encountered when constructing request URI, throwing exception.");
             throw new ApiException("Exception encountered when constructing request URI.", e);
         }
 
@@ -122,15 +117,12 @@ public class SteamRequestSender {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = EntityUtils.toString(response.getEntity());
                 } else {
-                    log.error("Get App Details response contained no response body, throwing exception.");
                     throw new ApiException("Get App Details response contained no response body.");
                 }
             } else {
-                log.error("Get App Details response contained non-200 status code, throwing exception.");
                 throw new ApiException("Get App Details response contained non-200 status code.");
             }
         } catch (IOException e) {
-            log.error("Exception encountered when executing HTTP request, throwing exception.");
             throw new ApiException("Exception encountered when executing HTTP request.");
         }
 
