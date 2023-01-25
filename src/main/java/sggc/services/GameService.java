@@ -35,7 +35,7 @@ public class GameService {
      * encountered an {@link ErrorResult} object containing details on the error.
      */
     public Result<Boolean> isGameMultiplayer(Game game) {
-        log.debug("Attempting to determine whether game [{}] is multiplayer", game.getAppid());
+        log.debug("Attempting to determine whether game [{}] is multiplayer.", game.getAppid());
         GameData parsedResponse;
         try {
             parsedResponse = steamRequestSender.getAppDetails(game.getAppid());
@@ -48,22 +48,22 @@ public class GameService {
         //Check for presence of multiplayer category
         for (GameCategory category : parsedResponse.getCategories()) {
             if (category.getId() == GameCategory.SteamGameCategory.MULTIPLAYER) {
-                log.debug("Game [{}] is multiplayer", game.getAppid());
+                log.debug("Game [{}] is multiplayer.", game.getAppid());
                 return new SuccessResult<>(true);
             }
         }
-        log.debug("Game [{}] is not multiplayer", game.getAppid());
+        log.debug("Game [{}] is not multiplayer.", game.getAppid());
         return new SuccessResult<>(false);
     }
 
     /**
-     * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform
+     * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform.
      *
      * @return A {@link SuccessResult} object containing all games currently stored on Steam. If instead an error was
      * encountered an {@link ErrorResult} object containing details on the error.
      */
     public Result<Set<Game>> requestAllGamesFromSteam() {
-        log.info("Contacting the Steam API for a Set of games");
+        log.info("Contacting the Steam API for a Set of games.");
         try {
             GetAppListResponse getGamesResponse = steamRequestSender.getListOfAllSteamGames();
             return new SuccessResult<>(getGamesResponse.getApplist().getApps());

@@ -21,7 +21,7 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 
 /**
- * Represents an interface for communicating with the Steam API
+ * Represents an interface for communicating with the Steam API.
  */
 @Slf4j
 public class SteamRequestSender {
@@ -64,6 +64,7 @@ public class SteamRequestSender {
             requestUri = steamApiRequest(GET_APP_LIST_ENDPOINT)
                     .build();
         } catch (URISyntaxException | SecretRetrievalException e) {
+            log.error("Exception encountered when constructing request URI, throwing exception.");
             throw new ApiException("Exception encountered when constructing request URI.", e);
         }
 
@@ -71,28 +72,34 @@ public class SteamRequestSender {
         String jsonResponse;
         log.debug("Contacting [{}] to get list of all games on Steam.", sanitizeRequestUri(requestUri));
 
-        try(CloseableHttpResponse response = httpClient.execute(request)){
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = EntityUtils.toString(response.getEntity());
                 } else {
+                    log.error("Get App List response contained no response body, throwing exception.");
                     throw new ApiException("Get App List response contained no response body.");
                 }
             } else {
+                log.error("Get App List request responded with a non-200 status code., throwing exception.");
                 throw new ApiException("Get App List request responded with a non-200 status code.");
             }
+        } catch (IOException e) {
+            log.error("Exception encountered when executing HTTP request, throwing exception.");
+            throw new ApiException("Exception encountered when executing HTTP request.");
         }
+
         Gson gson = new Gson();
         return gson.fromJson(jsonResponse, GetAppListResponse.class);
     }
 
     /**
-     * Retrieves the details of a specific game's details via the Steam Store's API
+     * Retrieves the details of a specific game's details via the Steam Store's API.
      *
-     * @param appId the appid of the game whose details are being requested
-     * @return a GameData object parsed from the response from the Steam API containing the details of the specified app
-     * @throws ApiException if an unexpected event is encountered when requesting the details from the Steam API
-     * @throws IOException  if an exception occurs when parsing the response from the Steam API
+     * @param appId the appid of the game whose details are being requested.
+     * @return a GameData object parsed from the response from the Steam API containing the details of the specified app.
+     * @throws ApiException if an unexpected event is encountered when requesting the details from the Steam API.
+     * @throws IOException  if an exception occurs when parsing the response from the Steam API.
      */
     public GameData getAppDetails(String appId) throws ApiException, IOException {
 
@@ -102,6 +109,7 @@ public class SteamRequestSender {
                     .addParameter(STEAM_APP_IDS_QUERY_PARAM_KEY, appId)
                     .build();
         } catch (URISyntaxException e) {
+            log.error("Exception encountered when constructing request URI, throwing exception.");
             throw new ApiException("Exception encountered when constructing request URI.", e);
         }
 
@@ -109,17 +117,20 @@ public class SteamRequestSender {
         String jsonResponse;
         log.debug("Contacting [{}] to get details of game [{}].", requestUri, appId);
 
-        try(CloseableHttpResponse response = httpClient.execute(request)){
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if (response.getEntity() != null && response.getEntity().getContent() != null) {
                     jsonResponse = EntityUtils.toString(response.getEntity());
                 } else {
+                    log.error("Get App Details response contained no response body, throwing exception.");
                     throw new ApiException("Get App Details response contained no response body.");
                 }
             } else {
+                log.error("Get App Details response contained non-200 status code, throwing exception.");
                 throw new ApiException("Get App Details response contained non-200 status code.");
             }
         } catch (IOException e) {
+            log.error("Exception encountered when executing HTTP request, throwing exception.");
             throw new ApiException("Exception encountered when executing HTTP request.");
         }
 
@@ -127,11 +138,11 @@ public class SteamRequestSender {
     }
 
     /**
-     * Parses the game details list from Steam GetAppDetails endpoint into a model object
+     * Parses the game details list from Steam GetAppDetails endpoint into a model object.
      *
-     * @param stringToParse the string to parse
-     * @return a {@link GameData} object serialized from the response from the Steam API
-     * @throws IOException if an error occurs while serializing the string into JSON
+     * @param stringToParse the string to parse.
+     * @return a {@link GameData} object serialized from the response from the Steam API.
+     * @throws IOException if an error occurs while serializing the string into JSON.
      */
     private GameData parseGameDetailsList(String stringToParse) throws IOException {
         JsonObject rootObject = getAppDetailsResponseRootObject(stringToParse);
@@ -142,11 +153,13 @@ public class SteamRequestSender {
         has any details, we'll pass it through as a multiplayer game. Which is better than excluding games that could be multiplayer
         */
         if (!responseSuccess) {
-            log.debug("Could not determine whether game was multiplayer. Will be treated as multiplayer.");
+            log.debug("Could not determine whether game was multiplayer due to game data being removed from the Steam API." +
+                    " Will be treated as multiplayer.");
             return new GameData(Collections.singleton(new GameCategory(GameCategory.SteamGameCategory.MULTIPLAYER)));
-        } else  {
-            if (doesGameHaveCategories(rootObject)){
-                log.debug("Could not determine whether game was multiplayer. Will be treated as multiplayer.");
+        } else {
+            if (doesGameHaveCategories(rootObject)) {
+                log.debug("Could not determine whether game was multiplayer due to game not possessing any categories. " +
+                        "Will be treated as multiplayer.");
                 return new GameData(Collections.singleton(new GameCategory(GameCategory.SteamGameCategory.MULTIPLAYER)));
             }
         }
@@ -158,10 +171,10 @@ public class SteamRequestSender {
 
     /**
      * Returns the 'root' object from the Steam store's Get App Details endpoint.
-     * @param jsonString string representing the response from the endpoint.
      *
+     * @param jsonString string representing the response from the endpoint.
      * @return a Json object containing the details the Steam store contains on a game.
-     * @throws IOException if an error occurs while serializing the string into JSON
+     * @throws IOException if an error occurs while serializing the string into JSON.
      */
     public JsonObject getAppDetailsResponseRootObject(String jsonString) throws IOException {
         JsonElement jsonTree = parseResponseStringToJson(jsonString);
@@ -196,11 +209,11 @@ public class SteamRequestSender {
     }
 
     /**
-     * Parses a response string to JSON
+     * Parses a response string to JSON.
      *
-     * @param stringToParse the string to parse
-     * @return JSON representation of the string
-     * @throws IOException if an error occurs while serializing the string into JSON
+     * @param stringToParse the string to parse.
+     * @return JSON representation of the string.
+     * @throws IOException if an error occurs while serializing the string into JSON.
      */
     private JsonElement parseResponseStringToJson(String stringToParse) throws IOException {
         try {
@@ -212,9 +225,9 @@ public class SteamRequestSender {
     }
 
     /**
-     * Retrieves a Steam API key from AWS secrets manager
+     * Retrieves a Steam API key from AWS secrets manager.
      *
-     * @return a Steam API key stored within AWS secrets manager
+     * @return a Steam API key stored within AWS secrets manager.
      * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
      */
 
@@ -226,20 +239,19 @@ public class SteamRequestSender {
     /**
      * Masks the Steam API key within the query params of a  request URI, used to prevent the key being logged.
      *
-     * @param requestUri the request URI whose Steam API key should be masked
-     * @return the request URI, now containing a masked Steam API key. If the steam id query param cannot be found
-     * within the request URI, then the request URI is returned, unmodified
+     * @param requestUri the request URI whose Steam API key should be masked.
+     * @return the request URI, now containing a masked Steam API key. If the steam id query param cannot be found.
+     * within the request URI, then the request URI is returned, unmodified.
      */
     private String maskSteamApiKey(String requestUri) {
         String steamApiKey;
         int steamKeyIndex = requestUri.indexOf(STEAM_KEY_QUERY_PARAM_KEY);
         if (steamKeyIndex != -1) {
             final String steamApiKeyQueryParam = STEAM_KEY_QUERY_PARAM_KEY + "=";
-            if(requestUri.contains("&")) {
+            if (requestUri.contains("&")) {
                 steamApiKey = requestUri.substring(steamKeyIndex).substring(steamApiKeyQueryParam.length(),
                         requestUri.substring(steamKeyIndex).indexOf("&"));
-            }
-            else {
+            } else {
                 steamApiKey = requestUri.substring(steamKeyIndex).substring(steamApiKeyQueryParam.length());
             }
             return requestUri.replaceAll(steamApiKey, STEAM_API_KEY_MASK);
@@ -249,10 +261,10 @@ public class SteamRequestSender {
     }
 
     /**
-     * Sanitizes the URI to the Steam API to prevent sensitive data from being logged
+     * Sanitizes the URI to the Steam API to prevent sensitive data from being logged.
      *
-     * @param requestUri the request URI to sanitize
-     * @return a sanitized request URI that is safe to log
+     * @param requestUri the request URI to sanitize.
+     * @return a sanitized request URI that is safe to log.
      */
     private String sanitizeRequestUri(URI requestUri) {
         String requestUriString = requestUri.toString();
@@ -263,11 +275,11 @@ public class SteamRequestSender {
     }
 
     /**
-     * Entrypoint for constructing a request to the Steam API. Sets all properties for a successful request to the Steam API
+     * Entrypoint for constructing a request to the Steam API. Sets all properties for a successful request to the Steam API.
      *
-     * @param endpoint the desired Steam API endpoint for the request to be built with
-     * @return a builder object which can be chained to provide more properties that the request will be constructed with
-     * @throws URISyntaxException       if an exception occurs constructing the request URI
+     * @param endpoint the desired Steam API endpoint for the request to be built with.
+     * @return a builder object which can be chained to provide more properties that the request will be constructed with.
+     * @throws URISyntaxException       if an exception occurs constructing the request URI.
      * @throws SecretRetrievalException if an exception occurs trying to retrieve the Steam API key from the external secrets store.
      */
     private URIBuilder steamApiRequest(String endpoint) throws URISyntaxException, SecretRetrievalException {
@@ -278,9 +290,9 @@ public class SteamRequestSender {
     /**
      * Entrypoint for constructing a request to the Steam Store.
      *
-     * @param endpoint the desired Steam API endpoint for the request to be built with
-     * @return a builder object which can be chained to provide more properties that the request will be constructed with
-     * @throws URISyntaxException if an exception occurs constructing the request URI
+     * @param endpoint the desired Steam API endpoint for the request to be built with.
+     * @return a builder object which can be chained to provide more properties that the request will be constructed with.
+     * @throws URISyntaxException if an exception occurs constructing the request URI.
      */
     private URIBuilder steamStoreRequest(String endpoint) throws URISyntaxException {
         return new URIBuilder(steamStoreAddress + endpoint);

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.Set;
 
 /**
- * Represents a list of Steam applications
+ * Represents a list of Steam applications.
  */
 @Data
 @RequiredArgsConstructor

@@ -1,7 +1,7 @@
 package sggc.exceptions;
 
 /**
- * Represents an exception to be thrown when an error occurs trying to retrieve a secret from an external secrets store
+ * Represents an exception to be thrown when an error occurs trying to retrieve a secret from an external secrets store.
  */
 public class SecretRetrievalException extends Exception {
 

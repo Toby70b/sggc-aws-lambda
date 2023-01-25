@@ -50,7 +50,8 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>secretsmanager</artifactId>
         </dependency>
-        <!-- ********** log4j ********** -->
+
+        <!-- ********** Log4j/SLF4J ********** -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
@@ -97,9 +98,10 @@
             <version>31.1-jre</version>
         </dependency>
     </dependencies>
-    <!-- ********** Plugin for AWS lambda to resolve ClassNotFoundException ********** -->
+
     <build>
         <plugins>
+            <!-- ********** Plugin for AWS lambda to resolve ClassNotFoundException ********** -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

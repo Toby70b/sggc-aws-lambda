@@ -10,7 +10,7 @@ public class AWSSecretsManagerClientFactory {
 
     /**
      * Initializes a new {@link SecretsManagerClient} object; A client for interacting with an AWS Secrets Manager instance.
-     * The region of the client is determined by the 'REGION' environment variable
+     * The region of the client is determined by the 'REGION' environment variable.
      *
      * @return a new client for interacting with a local AWS Secrets Manager instance.
      */

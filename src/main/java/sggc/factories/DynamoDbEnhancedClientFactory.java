@@ -11,7 +11,7 @@ public class DynamoDbEnhancedClientFactory {
 
     /**
      * Initializes a new {@link DynamoDbEnhancedClient} object; A client for interacting with an Amazon DynamoDB instance.
-     * The region of the client is determined by the 'REGION' environment variable
+     * The region of the client is determined by the 'REGION' environment variable.
      *
      * @return a new client for interacting with a local Amazon DynamoDB instance.
      */

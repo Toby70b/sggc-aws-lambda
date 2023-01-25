@@ -1,11 +1,12 @@
 package sggc.models.service;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import sggc.models.service.error.Error;
 
 import java.util.List;
-
+/**
+ * Represents a result from a service method, either successful or failed.
+ */
 @Data
 public abstract class Result<T> {
     private boolean success;
