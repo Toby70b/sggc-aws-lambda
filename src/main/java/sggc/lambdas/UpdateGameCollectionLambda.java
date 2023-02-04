@@ -1,82 +1,87 @@
 package sggc.lambdas;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import sggc.exceptions.SecretRetrievalException;
+import lombok.extern.slf4j.Slf4j;
+import sggc.factories.AWSSecretsManagerClientFactory;
+import sggc.factories.DynamoDbEnhancedClientFactory;
+import sggc.infrastructure.AwsSecretRetriever;
+import sggc.infrastructure.DynamoDbBatchWriter;
+import sggc.infrastructure.SteamRequestSender;
 import sggc.models.Game;
-import sggc.models.GetAppListResponse;
+import sggc.models.service.Result;
+import sggc.services.GameService;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import sggc.utils.DynamoDbUtil;
-import sggc.utils.SteamAPIUtil;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.*;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Class representing a lambda function scheduled to run on AWS Lambda via  CRON timer every day at midnight 
- * to update the SGGC's 'Game' DynamoDB Table with new Games added to Steam over the previous day.
+ * Class representing a lambda function to update the SGGC's DynamoDB Table with new Games added to Steam.
  */
-public class UpdateGameCollectionLambda implements RequestStreamHandler {
+@Slf4j
+public class UpdateGameCollectionLambda {
 
     private static final String GAME_TABLE_NAME = "Game";
 
-    @Override
-    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) {
-        LambdaLogger logger = context.getLogger();
-        logger.log("Creating DynamoDB client");
-        DynamoDbEnhancedClient enhancedClient = DynamoDbUtil.createDynamoDbEnhancedClient();
-        logger.log("DynamoDB client created");
+    /**
+     * Entrypoint for the lambda function.
+     */
+    public void handleRequest() {
+        log.debug("Creating DynamoDB client.");
+        DynamoDbEnhancedClient enhancedClient = new DynamoDbEnhancedClientFactory().createEnhancedClient();
         DynamoDbTable<Game> gameTable = enhancedClient.table(GAME_TABLE_NAME, TableSchema.fromBean(Game.class));
-        logger.log("Retrieving all persisted games via scan");
+        log.info("Retrieving all persisted games via scan.");
         Set<Game> persistedGames = gameTable.scan().items().stream().collect(Collectors.toSet());
-        logger.log("Persisted games retrieved");
-        Set<Game> allSteamGames = new HashSet<>();
-        logger.log("Contacting the Steam API for a Set of games");
-        try {
-            allSteamGames = requestAllGamesFromSteam();
-        } catch (Exception e) {
-            logger.log("Exception occurred while contacting the Steam API [" + e + "]");
+        log.debug("Persisted games retrieved.");
+
+        AwsSecretRetriever secretRetriever = new AwsSecretRetriever(new AWSSecretsManagerClientFactory().createClient());
+        SteamRequestSender steamRequestSender = new SteamRequestSender(secretRetriever);
+        GameService gameService = new GameService(steamRequestSender);
+
+        log.info("Retrieving all from Steam API.");
+        Result<Set<Game>> allSteamGamesResult = gameService.requestAllGamesFromSteam();
+        Set<Game> allSteamGames = null;
+
+        if (allSteamGamesResult.isSuccess() && allSteamGamesResult.getData() != null) {
+            allSteamGames = allSteamGamesResult.getData();
+        } else {
+            log.error("Could not retrieve list of all Steam games, exiting.");
             System.exit(1);
         }
-        logger.log("All games retrieved from Steam API games");
+
+        log.debug("All games retrieved from Steam API games.");
+        log.info("Filtering persisted games.");
         Set<Game> newGames = getNonPersistedGames(persistedGames, allSteamGames);
-        newGames.forEach(game -> game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli()));
-        logger.log("New games filtered, attempting to persists [" + newGames.size() + "] games");
-        DynamoDbUtil.batchWrite(Game.class, newGames, enhancedClient, gameTable);
-        logger.log("Save successful");
+        for (Game game : newGames) {
+            game.setId(UUID.randomUUID() + "-" + new Date().toInstant().toEpochMilli());
+
+            log.debug("Attempting to determine multiplayer status of game [{}]", game.getAppid());
+            Result<Boolean> multiplayerStatusResult = gameService.isGameMultiplayer(game);
+            if (multiplayerStatusResult.isSuccess() && multiplayerStatusResult.getData() != null) {
+                game.setMultiplayer(multiplayerStatusResult.getData());
+            }
+        }
+        log.info("New games filtered, attempting to persist [{}] games.", newGames.size());
+        DynamoDbBatchWriter dynamoDbBatchWriter = new DynamoDbBatchWriter(enhancedClient);
+        dynamoDbBatchWriter.batchWrite(Game.class, newGames, gameTable);
+        log.info("Save successful.");
     }
 
     /**
-     * Given two Sets, a Set of all games and a Set of games determined to be already persisted,
-     * returns a Set of any non-persisted
+     * Given two Sets, a Set of all games and a Set of games determined to be already persisted, returns a Set of any
+     * non-persisted games.
      *
-     * @param persistedGames a Set of games determined to already by persisted
-     * @param allGames       a Set of all games currently on Steam
-     * @return a Set of non-persisted games
+     * @param persistedGames a Set of games determined to already by persisted.
+     * @param allGames       a Set of all games currently on Steam.
+     * @return a Set of non-persisted games.
      */
-    private Set<Game> getNonPersistedGames(Set<Game> persistedGames, Set<Game> allGames) {new HashSet<>(new HashSet<>(allGames));
+    private Set<Game> getNonPersistedGames(Set<Game> persistedGames, Set<Game> allGames) {
+        new HashSet<>(new HashSet<>(allGames));
         return allGames.stream().filter(game -> !persistedGames.contains(game)).collect(Collectors.toSet());
     }
 
-    /**
-     * Sends a request to the Steam API to retrieve a Set of all games currently stored on the platform
-     * @return a Set of all games currently stored by Steam's API
-     * @throws SecretRetrievalException if an error occurs trying to retrieve the Steam API Key from AWS secrets manager
-     * @throws IOException if an error occurs sending or receiving the request from the Steam API
-     * @throws IllegalArgumentException if the parsed response from the Steam API isn't as expected
-     */
-    public Set<Game>  requestAllGamesFromSteam() throws SecretRetrievalException, IOException, IllegalArgumentException {
-        GetAppListResponse getGamesResponse = SteamAPIUtil.requestAllSteamAppsFromSteamApi();
-        if (getGamesResponse != null) {
-            return getGamesResponse.getApplist().getApps();
-        } else {
-            throw new IllegalArgumentException("Parsed response from Steam API was null");
-        }
-    }
 }

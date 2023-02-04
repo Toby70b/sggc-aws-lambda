@@ -1,4 +1,4 @@
-package sggc.models;
+package sggc.models.steam;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.Set;
 
 /**
- * Represents a list of Steam applications
+ * Represents a list of Steam applications.
  */
 @Data
 @RequiredArgsConstructor

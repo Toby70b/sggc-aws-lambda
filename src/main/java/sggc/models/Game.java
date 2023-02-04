@@ -8,7 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import java.util.Objects;
 
 /**
- * Represents an application on Steam
+ * Represents an application on Steam.
  */
 @RequiredArgsConstructor
 @DynamoDbBean
