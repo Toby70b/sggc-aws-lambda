@@ -82,7 +82,7 @@ public class SteamRequestSender {
                 throw new ApiException("Get App List request responded with a non-200 status code.");
             }
         } catch (IOException e) {
-            throw new ApiException("Exception encountered when executing HTTP request.");
+            throw new ApiException("Exception encountered when executing HTTP request.", e);
         }
 
         Gson gson = new Gson();
@@ -123,7 +123,7 @@ public class SteamRequestSender {
                 throw new ApiException("Get App Details response contained non-200 status code.");
             }
         } catch (IOException e) {
-            throw new ApiException("Exception encountered when executing HTTP request.");
+            throw new ApiException("Exception encountered when executing HTTP request.", e);
         }
 
         return parseGameDetailsList(jsonResponse);
